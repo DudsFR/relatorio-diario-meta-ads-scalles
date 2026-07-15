@@ -85,6 +85,7 @@
     margin-top: 10px;
   }
   .hidden { display: none; }
+  #imgWrapper svg { width: 100%; height: auto; display: block; border-radius: 6px; }
 </style>
 </head>
 <body>
@@ -109,9 +110,12 @@
   </div>
 
   <div class="card">
-    <label>Relatório (imagem)</label>
-    <div id="imgWrapper" style="overflow:auto;"></div>
-    <button id="downloadBtn" onclick="baixarImagem()" style="margin-top:14px;">Baixar imagem PNG</button>
+    <label>Relatório (imagem 1080x1080)</label>
+    <div id="imgWrapper" style="max-width:420px; margin:0 auto;"></div>
+    <div style="margin-top:14px;">
+      <button id="copyImgBtn" onclick="copiarImagem()">📋 Copiar imagem</button>
+      <button class="secondary" id="downloadBtn" onclick="baixarImagem()">Baixar imagem PNG</button>
+    </div>
   </div>
 </div>
 
@@ -262,7 +266,9 @@ function gerarRelatorio() {
     warnBox.classList.add('hidden');
   }
 
-  const hoje = new Date().toLocaleDateString('pt-BR');
+  const ontem = new Date();
+  ontem.setDate(ontem.getDate() - 1);
+  const hoje = ontem.toLocaleDateString('pt-BR');
 
   const relatorio =
 `Relatório Diário - ${hoje}
@@ -283,7 +289,7 @@ function svgEsc(s) {
 }
 
 function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investimento) {
-  const W = 880, H = 760;
+  const W = 1080, H = 1080;
   const impTxt = impressoes !== null ? Math.round(impressoes).toLocaleString('pt-BR') : '—';
   const alcTxt = alcance !== null ? Math.round(alcance).toLocaleString('pt-BR') : '—';
   const leadsTxt = leads !== null ? Math.round(leads).toLocaleString('pt-BR') : '—';
@@ -295,15 +301,16 @@ function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investim
   const BLACK = '#0c0c0c';
 
   // Card frame (thick red border, black interior)
-  const border = 40;
+  const border = 48;
   const cardX = border, cardY = border, cardW = W - border * 2, cardH = H - border * 2;
 
-  // Funnel: symmetric trapezoids that touch each other, tapering toward center
-  const cx = W / 2 - 10;
-  const funnelTop = 250;
-  const stageH = 92;
-  const gap = 6;
-  const stageTopW = [440, 340, 240, 140];
+  // Funnel: symmetric trapezoids that touch each other, tapering toward center.
+  // Kept left-of-center so the right column (Investimento / Custo por lead) has clear space.
+  const cx = cardX + 330;
+  const funnelTop = 330;
+  const stageH = 112;
+  const gap = 8;
+  const stageTopW = [500, 380, 260, 150];
 
   function trapezoid(topW, botW, y) {
     const x1 = cx - topW / 2, x2 = cx + topW / 2;
@@ -316,7 +323,7 @@ function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investim
   let y = funnelTop;
   for (let i = 0; i < stageTopW.length; i++) {
     const topW = stageTopW[i];
-    const botW = i < stageTopW.length - 1 ? stageTopW[i + 1] : topW - 100;
+    const botW = i < stageTopW.length - 1 ? stageTopW[i + 1] : topW - 110;
     funnelShapes += `<polygon points="${trapezoid(topW, botW, y)}" fill="#f0f0f0"/>\n  `;
     y += stageH + gap;
   }
@@ -324,6 +331,12 @@ function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investim
   const row1Y = funnelTop + stageH / 2;
   const row2Y = funnelTop + stageH + gap + stageH / 2;
   const row3Y = funnelTop + (stageH + gap) * 2 + stageH / 2;
+
+  // Right column: Investimento / Custo por lead — generously spaced, right-aligned, no overlap with funnel
+  const panelRight = cardX + cardW - 40;
+  const panelBarX = cardX + cardW - 150;
+  const panel1Y = 560;
+  const panel2Y = 760;
 
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -336,49 +349,50 @@ function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investim
   <rect x="${cardX}" y="${cardY}" width="${cardW}" height="${cardH}" fill="${BLACK}"/>
 
   <!-- Header band -->
-  <rect x="${cardX}" y="${cardY}" width="${cardW}" height="150" fill="${BLACK}"/>
-  <rect x="${cardX}" y="${cardY + 150}" width="${cardW}" height="3" fill="#ffffff"/>
+  <rect x="${cardX}" y="${cardY}" width="${cardW}" height="190" fill="${BLACK}"/>
+  <rect x="${cardX}" y="${cardY + 190}" width="${cardW}" height="3" fill="#ffffff"/>
 
   <!-- Scalles logo (top-left) -->
-  <image href="data:image/png;base64,${SCALLES_LOGO_B64}" x="${cardX + 30}" y="${cardY + 25}" width="95" height="95" preserveAspectRatio="xMidYMid meet"/>
+  <image href="data:image/png;base64,${SCALLES_LOGO_B64}" x="${cardX + 35}" y="${cardY + 40}" width="115" height="115" preserveAspectRatio="xMidYMid meet"/>
 
   <!-- Title -->
-  <text x="${W/2 + 20}" y="${cardY + 68}" font-family="Segoe UI, Arial" font-size="32" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">RELATÓRIO DIÁRIO</text>
-  <text x="${W/2 + 20}" y="${cardY + 108}" font-family="Segoe UI, Arial" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">${svgEsc(dataStr)}</text>
+  <text x="${W/2 + 25}" y="${cardY + 82}" font-family="Segoe UI, Arial" font-size="38" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">RELATÓRIO DIÁRIO</text>
+  <text x="${W/2 + 25}" y="${cardY + 130}" font-family="Segoe UI, Arial" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle">${svgEsc(dataStr)}</text>
 
   <!-- Meta logo (top-right) -->
-  <image href="data:image/webp;base64,${META_LOGO_B64}" x="${W - border - 118}" y="${cardY + 32}" width="98" height="85" preserveAspectRatio="xMidYMid meet"/>
+  <image href="data:image/webp;base64,${META_LOGO_B64}" x="${W - border - 140}" y="${cardY + 48}" width="115" height="99" preserveAspectRatio="xMidYMid meet"/>
 
   <!-- Scalles logo watermark behind funnel -->
-  <image href="data:image/png;base64,${SCALLES_LOGO_B64}" x="${cx - 280}" y="${funnelTop - 75}" width="560" height="560" opacity="0.08" preserveAspectRatio="xMidYMid meet"/>
+  <image href="data:image/png;base64,${SCALLES_LOGO_B64}" x="${cx - 330}" y="${funnelTop - 90}" width="660" height="660" opacity="0.08" preserveAspectRatio="xMidYMid meet"/>
 
   <!-- Funnel -->
   ${funnelShapes}
 
   <!-- Funnel labels + numbers -->
-  <text x="${cx - stageTopW[0]/2 - 25}" y="${row1Y + 6}" font-family="Segoe UI, Arial" font-size="19" fill="#ffffff" text-anchor="end">Impressões</text>
-  <text x="${cx}" y="${row1Y + 12}" font-family="Segoe UI, Arial" font-size="36" font-weight="800" fill="${RED}" text-anchor="middle">${svgEsc(impTxt)}</text>
+  <text x="${cx - stageTopW[0]/2 - 30}" y="${row1Y + 7}" font-family="Segoe UI, Arial" font-size="23" fill="#ffffff" text-anchor="end">Impressões</text>
+  <text x="${cx}" y="${row1Y + 14}" font-family="Segoe UI, Arial" font-size="42" font-weight="800" fill="${RED}" text-anchor="middle">${svgEsc(impTxt)}</text>
 
-  <text x="${cx - stageTopW[1]/2 - 25}" y="${row2Y - 6}" font-family="Segoe UI, Arial" font-size="19" fill="#ffffff" text-anchor="end">Pessoas</text>
-  <text x="${cx - stageTopW[1]/2 - 25}" y="${row2Y + 18}" font-family="Segoe UI, Arial" font-size="19" fill="#ffffff" text-anchor="end">alcançadas</text>
-  <text x="${cx}" y="${row2Y + 12}" font-family="Segoe UI, Arial" font-size="36" font-weight="800" fill="${RED}" text-anchor="middle">${svgEsc(alcTxt)}</text>
+  <text x="${cx - stageTopW[1]/2 - 30}" y="${row2Y - 7}" font-family="Segoe UI, Arial" font-size="23" fill="#ffffff" text-anchor="end">Pessoas</text>
+  <text x="${cx - stageTopW[1]/2 - 30}" y="${row2Y + 21}" font-family="Segoe UI, Arial" font-size="23" fill="#ffffff" text-anchor="end">alcançadas</text>
+  <text x="${cx}" y="${row2Y + 14}" font-family="Segoe UI, Arial" font-size="42" font-weight="800" fill="${RED}" text-anchor="middle">${svgEsc(alcTxt)}</text>
 
-  <text x="${cx - stageTopW[2]/2 - 25}" y="${row3Y + 6}" font-family="Segoe UI, Arial" font-size="19" fill="#ffffff" text-anchor="end">Leads</text>
-  <text x="${cx}" y="${row3Y + 12}" font-family="Segoe UI, Arial" font-size="36" font-weight="800" fill="${RED}" text-anchor="middle">${svgEsc(leadsTxt)}</text>
+  <text x="${cx - stageTopW[2]/2 - 30}" y="${row3Y + 7}" font-family="Segoe UI, Arial" font-size="23" fill="#ffffff" text-anchor="end">Leads</text>
+  <text x="${cx}" y="${row3Y + 14}" font-family="Segoe UI, Arial" font-size="42" font-weight="800" fill="${RED}" text-anchor="middle">${svgEsc(leadsTxt)}</text>
 
-  <!-- Side panels: Investimento / Custo por lead -->
-  <rect x="${W - border - 175}" y="${row2Y - 45}" width="5" height="66" fill="${RED}"/>
-  <text x="${W - border - 195}" y="${row2Y - 24}" font-family="Segoe UI, Arial" font-size="17" font-weight="700" fill="#ffffff" text-anchor="end">Investimento</text>
-  <text x="${W - border - 195}" y="${row2Y - 2}" font-family="Segoe UI, Arial" font-size="17" font-weight="700" fill="#ffffff" text-anchor="end">do dia</text>
-  <text x="${W - border - 195}" y="${row2Y + 22}" font-family="Segoe UI, Arial" font-size="20" font-weight="800" fill="${RED}" text-anchor="end">${svgEsc(investTxt)}</text>
+  <!-- Right column: Investimento do dia -->
+  <rect x="${panelBarX}" y="${panel1Y - 44}" width="6" height="86" fill="${RED}"/>
+  <text x="${panelBarX - 22}" y="${panel1Y - 18}" font-family="Segoe UI, Arial" font-size="22" font-weight="700" fill="#ffffff" text-anchor="end">Investimento</text>
+  <text x="${panelBarX - 22}" y="${panel1Y + 10}" font-family="Segoe UI, Arial" font-size="22" font-weight="700" fill="#ffffff" text-anchor="end">do dia</text>
+  <text x="${panelRight}" y="${panel1Y + 38}" font-family="Segoe UI, Arial" font-size="26" font-weight="800" fill="${RED}" text-anchor="end">${svgEsc(investTxt)}</text>
 
-  <rect x="${W - border - 175}" y="${row3Y - 45}" width="5" height="66" fill="${RED}"/>
-  <text x="${W - border - 195}" y="${row3Y - 24}" font-family="Segoe UI, Arial" font-size="17" font-weight="700" fill="#ffffff" text-anchor="end">Custo por</text>
-  <text x="${W - border - 195}" y="${row3Y - 2}" font-family="Segoe UI, Arial" font-size="17" font-weight="700" fill="#ffffff" text-anchor="end">lead</text>
-  <text x="${W - border - 195}" y="${row3Y + 22}" font-family="Segoe UI, Arial" font-size="20" font-weight="800" fill="${RED}" text-anchor="end">${svgEsc(custoTxt)}</text>
+  <!-- Right column: Custo por lead -->
+  <rect x="${panelBarX}" y="${panel2Y - 44}" width="6" height="86" fill="${RED}"/>
+  <text x="${panelBarX - 22}" y="${panel2Y - 18}" font-family="Segoe UI, Arial" font-size="22" font-weight="700" fill="#ffffff" text-anchor="end">Custo por</text>
+  <text x="${panelBarX - 22}" y="${panel2Y + 10}" font-family="Segoe UI, Arial" font-size="22" font-weight="700" fill="#ffffff" text-anchor="end">lead</text>
+  <text x="${panelRight}" y="${panel2Y + 38}" font-family="Segoe UI, Arial" font-size="26" font-weight="800" fill="${RED}" text-anchor="end">${svgEsc(custoTxt)}</text>
 
   <!-- Bottom-right decorative corner -->
-  <polygon points="${W},${H} ${W},${H-90} ${W-90},${H}" fill="${RED_DARK}" opacity="0.6"/>
+  <polygon points="${W},${H} ${W},${H-110} ${W-110},${H}" fill="${RED_DARK}" opacity="0.6"/>
 </svg>`;
 
   const wrapper = document.getElementById('imgWrapper');
@@ -386,7 +400,7 @@ function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investim
   wrapper._svgSource = svg;
 }
 
-function baixarImagem() {
+function svgToPngBlob(callback) {
   const wrapper = document.getElementById('imgWrapper');
   const svgEl = wrapper.querySelector('svg');
   if (!svgEl) { alert('Gere o relatório primeiro.'); return; }
@@ -396,27 +410,45 @@ function baixarImagem() {
   const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(svgBlob);
 
-  const W = svgEl.viewBox.baseVal.width || 880;
-  const H = svgEl.viewBox.baseVal.height || 720;
+  const W = svgEl.viewBox.baseVal.width || 1080;
+  const H = svgEl.viewBox.baseVal.height || 1080;
 
   const img = new Image();
   img.onload = function () {
     const canvas = document.createElement('canvas');
-    canvas.width = W * 2;
-    canvas.height = H * 2;
+    canvas.width = W;
+    canvas.height = H;
     const ctx = canvas.getContext('2d');
-    ctx.scale(2, 2);
     ctx.drawImage(img, 0, 0, W, H);
     URL.revokeObjectURL(url);
-
     canvas.toBlob(function (blob) {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'relatorio-diario.png';
-      a.click();
-    });
+      callback(blob);
+    }, 'image/png');
   };
   img.src = url;
+}
+
+function baixarImagem() {
+  svgToPngBlob(function (blob) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'relatorio-diario.png';
+    a.click();
+  });
+}
+
+function copiarImagem() {
+  svgToPngBlob(async function (blob) {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      const btn = document.getElementById('copyImgBtn');
+      const original = btn.textContent;
+      btn.textContent = 'Imagem copiada!';
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    } catch (e) {
+      alert('Não foi possível copiar a imagem automaticamente. Use o botão "Baixar imagem" como alternativa.');
+    }
+  });
 }
 
 function limpar() {
