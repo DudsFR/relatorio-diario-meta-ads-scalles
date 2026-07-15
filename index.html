@@ -305,12 +305,13 @@ function gerarImagem(dataStr, impressoes, alcance, leads, custoPorLead, investim
   const cardX = border, cardY = border, cardW = W - border * 2, cardH = H - border * 2;
 
   // Funnel: symmetric trapezoids that touch each other, tapering toward center.
-  // Kept left-of-center so the right column (Investimento / Custo por lead) has clear space.
-  const cx = cardX + 330;
+  // cx is pushed right enough that left-side labels never run past the card's left edge,
+  // while still leaving clear space before the right column (Investimento / Custo por lead).
+  const cx = cardX + 500;
   const funnelTop = 330;
   const stageH = 112;
   const gap = 8;
-  const stageTopW = [500, 380, 260, 150];
+  const stageTopW = [460, 350, 240, 140];
 
   function trapezoid(topW, botW, y) {
     const x1 = cx - topW / 2, x2 = cx + topW / 2;
